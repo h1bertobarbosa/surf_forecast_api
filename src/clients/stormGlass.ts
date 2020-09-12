@@ -1,12 +1,14 @@
-// import { AxiosStatic } from 'axios';
 import { InternalError } from '@src/util/errors/internal-error';
-import config, {IConfig} from 'config'
-import * as HTTPUtil from '@src/util/request'
+import config, { IConfig } from 'config';
+// Another way to have similar behaviour to TS namespaces
+import * as HTTPUtil from '@src/util/request';
+
 export interface StormGlassPointSource {
   [key: string]: number;
 }
+
 export interface StormGlassPoint {
-  readonly time: string;
+  time: string;
   readonly waveHeight: StormGlassPointSource;
   readonly waveDirection: StormGlassPointSource;
   readonly swellDirection: StormGlassPointSource;
@@ -15,7 +17,8 @@ export interface StormGlassPoint {
   readonly windDirection: StormGlassPointSource;
   readonly windSpeed: StormGlassPointSource;
 }
-export interface StormClassForecastResponse {
+
+export interface StormGlassForecastResponse {
   hours: StormGlassPoint[];
 }
 
@@ -30,6 +33,19 @@ export interface ForecastPoint {
   windSpeed: number;
 }
 
+/**
+ * This error type is used when a request reaches out to the StormGlass API but returns an error
+ */
+export class StormGlassUnexpectedResponseError extends InternalError {
+  constructor(message: string) {
+    super(message);
+  }
+}
+
+/**
+ * This error type is used when something breaks before the request reaches out to the StormGlass API
+ * eg: Network error, or request validation error
+ */
 export class ClientRequestError extends InternalError {
   constructor(message: string) {
     const internalMessage =
@@ -46,7 +62,13 @@ export class StormGlassResponseError extends InternalError {
   }
 }
 
-const stormGlassResourceConfig: IConfig = config.get('App.resources.StormGlass')
+/**
+ * We could have proper type for the configuration
+ */
+const stormglassResourceConfig: IConfig = config.get(
+  'App.resources.StormGlass'
+);
+
 export class StormGlass {
   readonly stormGlassAPIParams =
     'swellDirection,swellHeight,swellPeriod,waveDirection,waveHeight,windDirection,windSpeed';
@@ -56,25 +78,35 @@ export class StormGlass {
 
   public async fetchPoints(lat: number, lng: number): Promise<ForecastPoint[]> {
     try {
-      const response = await this.request.get<StormClassForecastResponse>(
-        `https://${stormGlassResourceConfig.get('apiUrl')}/weather/point?lat=${lat}&lng=${lng}&params=${this.stormGlassAPIParams}&source=${this.stormGlassAPISource}`,
+      const response = await this.request.get<StormGlassForecastResponse>(
+        `${stormglassResourceConfig.get(
+          'apiUrl'
+        )}/weather/point?lat=${lat}&lng=${lng}&params=${
+          this.stormGlassAPIParams
+        }&source=${this.stormGlassAPISource}`,
         {
           headers: {
-            Authorization: stormGlassResourceConfig.get('apiToken'),
+            Authorization: stormglassResourceConfig.get('apiToken'),
           },
         }
       );
-      return this.normalizedResponse(response.data);
+      return this.normalizeResponse(response.data);
     } catch (err) {
-      if(HTTPUtil.Request.isRequestError(err)) {
-        throw new StormGlassResponseError(`Error: ${JSON.stringify(err.response.data)} Code: ${err.response.status}`)
+      /**
+       * This is handling the Axios errors specifically
+       */
+      if (HTTPUtil.Request.isRequestError(err)) {
+        throw new StormGlassResponseError(
+          `Error: ${JSON.stringify(err.response.data)} Code: ${
+            err.response.status
+          }`
+        );
       }
       throw new ClientRequestError(err.message);
     }
   }
-
-  private normalizedResponse(
-    points: StormClassForecastResponse
+  private normalizeResponse(
+    points: StormGlassForecastResponse
   ): ForecastPoint[] {
     return points.hours.filter(this.isValidPoint.bind(this)).map((point) => ({
       swellDirection: point.swellDirection[this.stormGlassAPISource],

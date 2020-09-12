@@ -1,21 +1,22 @@
-import {StormGlass} from '@src/clients/stormGlass'
-import stormGlassNormalizedResponseFixture from '@test/fixtures/stormglass_normalized_response_3_hours.json'
-import {Beach, BeachPosition, Forecast, ForecastProcessingInternalError} from '../Forecast'
-jest.mock('@src/clients/stormGlass')
+import { StormGlass } from '@src/clients/stormGlass';
+import stormGlassNormalizedResponseFixture from '@test/fixtures/stormglass_normalized_response_3_hours.json';
+import { Forecast, ForecastProcessingInternalError } from '../forecast';
+import { Beach, BeachPosition } from '@src/models/beach';
+
+jest.mock('@src/clients/stormGlass');
 
 describe('Forecast Service', () => {
-  const mockedStormGlassService = new StormGlass() as jest.Mocked<StormGlass>
+  const mockedStormGlassService = new StormGlass() as jest.Mocked<StormGlass>;
   it('should return the forecast for a list of beaches', async () => {
     mockedStormGlassService.fetchPoints.mockResolvedValue(
       stormGlassNormalizedResponseFixture
-    )
+    );
     const beaches: Beach[] = [
       {
         lat: -33.792726,
         lng: 151.289824,
         name: 'Manly',
         position: BeachPosition.E,
-        user: 'some-id',
       },
     ];
     const expectedResponse = [
@@ -85,20 +86,19 @@ describe('Forecast Service', () => {
     expect(beachesWithRating).toEqual(expectedResponse);
   });
 
-  it('shold return an empty list when the beaches array is empty', async () => {
+  it('should return an empty list when the beaches array is empty', async () => {
     const forecast = new Forecast();
     const response = await forecast.processForecastForBeaches([]);
     expect(response).toEqual([]);
-  })
+  });
 
-  it('shold throw internal processing error when something goes wrong during the rating process', async () => {
+  it('should throw internal processing error when something goes wrong during the rating process', async () => {
     const beaches: Beach[] = [
       {
         lat: -33.792726,
         lng: 151.289824,
         name: 'Manly',
         position: BeachPosition.E,
-        user: 'some-id',
       },
     ];
     mockedStormGlassService.fetchPoints.mockRejectedValue(
