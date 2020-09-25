@@ -1,12 +1,13 @@
 {
   "App": {
+    "port": 3000,
     "database": {
       "mongoUrl": "mongodb://localhost:27017/surf-forecast"
     },
     "resources": {
       "StormGlass": {
         "apiUrl": "https://api.stormglass.io/v2",
-        "apiToken": "do-not-hard-code"
+        "apiToken": "5b7505c4-ff29-11ea-b32c-0242ac130002-5b750704-ff29-11ea-b32c-0242ac130002"
       }
     }
   }
